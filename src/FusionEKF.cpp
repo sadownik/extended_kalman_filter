@@ -40,14 +40,6 @@ FusionEKF::FusionEKF() {
    */
   
   
- /* 
-  ekf_.P_ = MatrixXd(4, 4);
-
-  ekf_.P_ << 1, 0, 0, 0,
-			 0, 1, 0, 0,
-			 0, 0, 1000, 0,
-			 0, 0, 0, 1000;
-*/
  H_laser_ << 1, 0, 0, 0,
 			 0, 1, 0, 0;
   
@@ -93,33 +85,31 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       // TODO: Initialize state.
+      
       ekf_.x_ << measurement_pack.raw_measurements_[0], measurement_pack.raw_measurements_[1], 0, 0;
       
 
     }
-	previous_timestamp_ = measurement_pack.timestamp_;
-    // done initializing, no need to predict or update
-    is_initialized_ = true;
     
-        MatrixXd Q(4, 4);
-        Q << 0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 0, 0;
-    
-          MatrixXd F(4, 4);
-    F << 1, 0, 0, 0,
-         0, 1, 0, 0,
-         0, 0, 1, 0,
-         0, 0, 0, 1;
-
-        MatrixXd P(4, 4);
+    MatrixXd P(4, 4);
     P << 1, 0,    0,    0,
          0, 1,    0,    0,
          0, 0, 1000,    0,
          0, 0,    0, 1000;
     
-    ekf_.Init(ekf_.x_, P, F, H_laser_, R_laser_, R_radar_, Q);
+    MatrixXd F(4, 4);
+    F << 1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1;
+
+    MatrixXd Q(4, 4);
+	
+    ekf_.Init(ekf_.x_, P, F, H_laser_, R_laser_,R_radar_,  Q);
+    
+	previous_timestamp_ = measurement_pack.timestamp_;
+    // done initializing, no need to predict or update
+    is_initialized_ = true;
     
     return;
   }
@@ -158,9 +148,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
          dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
          0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
   
-
+  
   ekf_.Predict();
-
+  
   /**
    * Update
    */
@@ -173,7 +163,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // TODO: Radar updates
-	ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+    
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+    
   } else {
     // TODO: Laser updates
     ekf_.Update(measurement_pack.raw_measurements_);
