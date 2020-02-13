@@ -3,6 +3,8 @@
 
 #include "Eigen/Dense"
 
+#include "tools.h"
+
 class KalmanFilter {
  public:
   /**
@@ -47,7 +49,7 @@ class KalmanFilter {
 
   
   void UpdateEKF(const Eigen::VectorXd &z);
-
+  Tools tools;
   // state vector
   Eigen::VectorXd x_;
 

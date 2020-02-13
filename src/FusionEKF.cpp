@@ -39,15 +39,15 @@ FusionEKF::FusionEKF() {
    * TODO: Set the process and measurement noises
    */
   
-  ekf_.x_ = VectorXd(4);
   
+ /* 
   ekf_.P_ = MatrixXd(4, 4);
 
   ekf_.P_ << 1, 0, 0, 0,
 			 0, 1, 0, 0,
 			 0, 0, 1000, 0,
 			 0, 0, 0, 1000;
-
+*/
  H_laser_ << 1, 0, 0, 0,
 			 0, 1, 0, 0;
   
@@ -79,7 +79,17 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       // TODO: Convert radar from polar to cartesian coordinates 
       //         and initialize state.
       
-	 ekf_.x_ << measurement_pack.raw_measurements_[0]* cos(measurement_pack.raw_measurements_[1]), measurement_pack.raw_measurements_[0]* sin(measurement_pack.raw_measurements_[1]) , 0, 0;
+      // convert polar from polar to cartesian coordinate system
+      double meas_rho     = measurement_pack.raw_measurements_[0];
+      double meas_phi     = measurement_pack.raw_measurements_[1];
+      double meas_px      = meas_rho     * cos(meas_phi);
+      double meas_py      = meas_rho     * sin(meas_phi);
+
+      // initial state in case the first measurement comes from radar sensor
+      ekf_.x_ << meas_px,
+           meas_py,
+                 0, // although radar gives velocity data in the form of the range rate rho dot, a radar measurement
+                 0; // does not contain enough information to determine the state variable velocities vx and vy
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       // TODO: Initialize state.
@@ -90,6 +100,27 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 	previous_timestamp_ = measurement_pack.timestamp_;
     // done initializing, no need to predict or update
     is_initialized_ = true;
+    
+        MatrixXd Q(4, 4);
+        Q << 0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0;
+    
+          MatrixXd F(4, 4);
+    F << 1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1;
+
+        MatrixXd P(4, 4);
+    P << 1, 0,    0,    0,
+         0, 1,    0,    0,
+         0, 0, 1000,    0,
+         0, 0,    0, 1000;
+    
+    ekf_.Init(ekf_.x_, P, F, H_laser_, R_laser_, R_radar_, Q);
+    
     return;
   }
 
@@ -112,6 +143,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   float dt_4 = dt_3 * dt;
 
   // Modify the F matrix so that the time is integrated
+  
+
   ekf_.F_(0, 2) = dt;
   ekf_.F_(1, 3) = dt;
 
